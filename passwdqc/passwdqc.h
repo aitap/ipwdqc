@@ -10,6 +10,7 @@
 /*
 #include <pwd.h>
 */
+#include <stdlib.h> // size_t
 
 typedef struct {
 	int min[5], max;

@@ -1,16 +1,46 @@
-#include <passwdqc.h>
+#include "passwdqc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iup.h>
 
-int main(int argc, char** argv) {
-	passwdqc_params_t params;
-	passwdqc_params_reset(&params);
+passwdqc_params_t params;
+Ihandle *password, *random_bits;
+
+int gen_passwd(Ihandle* button) {
+	(void)button; // I don't need it
+	params.qc.random_bits = IupGetInt(random_bits, "VALUE");
 	char *pass = passwdqc_random(&params.qc);
-	printf("%s\n", pass);
-	const char *diag = passwdqc_check(&params.qc, pass, "", NULL);
+	IupSetStrAttribute(password, "VALUE", pass);
 	free(pass);
-	if (!diag) diag = "OK";
-	printf("%s\n", diag);
+}
+
+int main(int argc, char** argv) {
+	IupOpen(&argc, &argv);
+
+	password = IupSetAttributes(IupText(NULL), "READONLY=YES,EXPAND=YES,VISIBLECOLUMNS=20,ALIGNNEMT=ACENTER");
+	random_bits = IupSetAttributes(IupText(NULL), "SPINMIN=24,SPINMAX=85,SPIN=YES,VALUE=47");
+
+	IupShow(
+		IupDialog(
+			IupVbox(
+				password,
+				IupHbox(
+					IupSetAttributes(IupLabel("Random bits:"),"PADDING=10x20"),
+					random_bits,
+					IupFill(),
+					IupSetCallbacks(
+						IupButton("Generate", NULL),
+						"ACTION",
+						&gen_passwd,
+					NULL),
+				NULL),
+			NULL)
+		)
+	);
+
+	passwdqc_params_reset(&params);
+
+	IupMainLoop();
+	IupClose();
 	return 0;
 }
