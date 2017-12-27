@@ -7,7 +7,9 @@
 #ifndef PASSWDQC_H__
 #define PASSWDQC_H__
 
+/*
 #include <pwd.h>
+*/
 
 typedef struct {
 	int min[5], max;
@@ -27,8 +29,10 @@ typedef struct {
 	passwdqc_params_pam_t pam;
 } passwdqc_params_t;
 
+/*
 extern const char *passwdqc_check(const passwdqc_params_qc_t *params,
     const char *newpass, const char *oldpass, const struct passwd *pw);
+*/
 extern char *passwdqc_random(const passwdqc_params_qc_t *params);
 
 extern int passwdqc_params_parse(passwdqc_params_t *params,
