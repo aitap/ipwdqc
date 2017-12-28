@@ -2,6 +2,7 @@
  * Copyright (c) 2008,2009 by Dmitry V. Levin.  See LICENSE.
  */
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

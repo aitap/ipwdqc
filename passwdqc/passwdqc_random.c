@@ -2,7 +2,7 @@
  * Copyright (c) 2000-2002,2005,2008,2010,2013,2016 by Solar Designer
  * See LICENSE
  */
-
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -63,6 +63,7 @@
 #define BITS_MAX \
 	(WORDS_MAX * SWORD_BITS)
 
+#ifndef _WIN32
 static int read_loop(int fd, unsigned char *buffer, int count)
 {
 	int offset, block;
@@ -85,6 +86,7 @@ static int read_loop(int fd, unsigned char *buffer, int count)
 
 	return offset;
 }
+#endif
 
 char *passwdqc_random(const passwdqc_params_qc_t *params)
 {
