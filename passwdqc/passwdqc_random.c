@@ -12,6 +12,12 @@
 #include "passwdqc.h"
 #include "wordset_4k.h"
 
+#ifdef _WIN32
+	#include <windows.h>
+	#include <ntstatus.h>
+	#include <bcrypt.h>
+#endif
+
 /*
  * We separate words in the generated "passphrases" with random special
  * characters out of a set of 16 (so we encode 4 bits per separator
@@ -88,7 +94,11 @@ char *passwdqc_random(const passwdqc_params_qc_t *params)
 	int i;
 	unsigned int max_length, length, extra;
 	const char *start, *end;
+#ifndef _WIN32
 	int fd;
+#else
+	BCRYPT_ALG_HANDLE cprov;
+#endif
 	unsigned char bytes[3];
 
 	bits = params->random_bits;
@@ -144,13 +154,26 @@ char *passwdqc_random(const passwdqc_params_qc_t *params)
 	if (max_length >= sizeof(output) || (int)max_length > params->max)
 		return NULL;
 
+#ifndef _WIN32
 	if ((fd = open("/dev/urandom", O_RDONLY)) < 0)
+#else
+	if (STATUS_SUCCESS != BCryptOpenAlgorithmProvider(
+		&cprov, BCRYPT_RNG_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0
+	))
+#endif
 		return NULL;
+
 
 	retval = NULL;
 	length = 0;
 	do {
+#ifndef _WIN32
 		if (read_loop(fd, bytes, sizeof(bytes)) != sizeof(bytes))
+#else
+		if (STATUS_SUCCESS != BCryptGenRandom(
+			cprov, bytes, sizeof(bytes), 0
+		))
+#endif
 			goto out;
 
 /*
@@ -208,7 +231,11 @@ out:
 	_passwdqc_memzero(bytes, sizeof(bytes));
 	_passwdqc_memzero(output, length);
 
+#ifndef _WIN32
 	close(fd);
+#else
+	BCryptCloseAlgorithmProvider(cprov, 0);
+#endif
 
 	return retval;
 }
