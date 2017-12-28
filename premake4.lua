@@ -41,3 +41,4 @@ solution "ipwdqc"
 
 		configuration "windows"
 			links { "gdi32", "comctl32", "ole32", "comdlg32", "uuid", "bcrypt" }
+			files { "gui.rc" }

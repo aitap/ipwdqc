@@ -1,0 +1,5 @@
+#ifdef _WIN64
+1 24 "dpiaware64.manifest"
+#else
+1 24 "dpiaware.manifest"
+#endif
