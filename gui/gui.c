@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <iup.h>
 
-passwdqc_params_t params;
-Ihandle *password, *random_bits;
+static passwdqc_params_t params;
+static Ihandle *password, *random_bits;
 
 static void gen_passwd(void) {
 	params.qc.random_bits = IupGetInt(random_bits, "VALUE");
