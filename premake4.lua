@@ -10,6 +10,11 @@ newoption {
    description = "Where IUP library can be found",
 }
 
+newoption {
+	trigger     = "winxp",
+	description = "Use the old crypto API available in Windows XP"
+}
+
 solution "ipwdqc"
 	configurations { "Debug", "Release" }
 	project "pwq-gui"
@@ -40,5 +45,12 @@ solution "ipwdqc"
 			flags { "Optimize", "ExtraWarnings" }
 
 		configuration "windows"
-			links { "gdi32", "comctl32", "ole32", "comdlg32", "uuid", "bcrypt" }
+			links { "gdi32", "comctl32", "ole32", "comdlg32", "uuid" }
 			files { "gui/gui.rc" }
+
+		configuration { "windows", "winxp" }
+			links { "advapi32" }
+			defines { "NEED_WINXP" }
+
+		configuration { "windows", "not winxp" }
+			links { "bcrypt" }

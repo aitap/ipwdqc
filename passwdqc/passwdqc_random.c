@@ -15,7 +15,11 @@
 #ifdef _WIN32
 	#include <windows.h>
 	#include <ntstatus.h>
-	#include <bcrypt.h>
+	#ifndef NEED_WINXP
+		#include <bcrypt.h>
+	#else
+		#include <wincrypt.h>
+	#endif
 #endif
 
 /*
@@ -99,7 +103,11 @@ char *passwdqc_random(const passwdqc_params_qc_t *params)
 #ifndef _WIN32
 	int fd;
 #else
+	#ifndef NEED_WINXP
 	BCRYPT_ALG_HANDLE cprov;
+	#else
+	HCRYPTPROV cprov;
+	#endif
 #endif
 	unsigned char bytes[3];
 
@@ -159,9 +167,15 @@ char *passwdqc_random(const passwdqc_params_qc_t *params)
 #ifndef _WIN32
 	if ((fd = open("/dev/urandom", O_RDONLY)) < 0)
 #else
+	#ifndef NEED_WINXP
 	if (STATUS_SUCCESS != BCryptOpenAlgorithmProvider(
 		&cprov, BCRYPT_RNG_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0
 	))
+	#else
+	if (!CryptAcquireContext(
+		&cprov, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT|CRYPT_SILENT
+	))
+	#endif
 #endif
 		return NULL;
 
@@ -172,9 +186,13 @@ char *passwdqc_random(const passwdqc_params_qc_t *params)
 #ifndef _WIN32
 		if (read_loop(fd, bytes, sizeof(bytes)) != sizeof(bytes))
 #else
+	#ifndef NEED_WINXP
 		if (STATUS_SUCCESS != BCryptGenRandom(
 			cprov, bytes, sizeof(bytes), 0
 		))
+	#else
+		if (!CryptGenRandom(cprov, sizeof(bytes), bytes))
+	#endif
 #endif
 			goto out;
 
@@ -236,7 +254,11 @@ out:
 #ifndef _WIN32
 	close(fd);
 #else
+	#ifndef NEED_WINXP
 	BCryptCloseAlgorithmProvider(cprov, 0);
+	#else
+	CryptReleaseContext(cprov, 0);
+	#endif
 #endif
 
 	return retval;
