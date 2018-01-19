@@ -1,17 +1,17 @@
 newoption {
-   trigger     = "iup-inc",
-   value       = "path/to/directory",
-   description = "Where iup.h can be found",
+	trigger = "iup-inc",
+	value = "path/to/directory",
+	description = "Where iup.h can be found",
 }
 
 newoption {
-   trigger     = "iup-lib",
-   value       = "path/to/directory",
-   description = "Where IUP library can be found",
+	trigger = "iup-lib",
+	value = "path/to/directory",
+	description = "Where IUP library can be found",
 }
 
 newoption {
-	trigger     = "winxp",
+	trigger = "winxp",
 	description = "Use the old crypto API available in Windows XP"
 }
 
