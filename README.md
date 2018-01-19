@@ -17,4 +17,4 @@ Each time you generate a password it's copied to the clipboard, so you can paste
 
 # Why is passwdqc source in there?
 
-`passwdqc` library needs a few patches to work on Windows (if you just build it using MinGW, it would try to open `/dev/urandom` and fail). I modified `passwdqc_random.c` to use [BCryptGenRandom](https://msdn.microsoft.com/en-us/library/windows/desktop/aa375458%28v%3Dvs.85%29.aspx) instead.
+`passwdqc` library needs a few patches to work on Windows (if you just build it using MinGW, it would try to open `/dev/urandom` and fail). I modified `passwdqc_random.c` to use [BCryptGenRandom](https://msdn.microsoft.com/en-us/library/windows/desktop/aa375458%28v%3Dvs.85%29.aspx) (or [CryptGenRandom](https://msdn.microsoft.com/en-us/library/windows/desktop/aa379942%28v=vs.85%29.aspx) on Windows XP) instead.
