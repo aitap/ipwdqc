@@ -1,6 +1,6 @@
 .\" Copyright (c) 2009 Dmitry V. Levin
 .\" All rights reserved.
-.\" Copyright (c) 2000-2003,2005,2008,2010 Solar Designer
+.\" Copyright (c) 2000-2003,2005,2008,2010,2019 Solar Designer
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -18,9 +18,9 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Owl: Owl/packages/passwdqc/passwdqc/pwqcheck.1,v 1.15 2010/03/15 04:17:19 solar Exp $
+.\" $Owl: Owl/packages/passwdqc/passwdqc/pwqcheck.1,v 1.19 2019/12/09 23:29:53 solar Exp $
 .\"
-.Dd March 15, 2010
+.Dd December 9, 2019
 .Dt PWQCHECK 1
 .Os "Openwall Project"
 .Sh NAME
@@ -160,7 +160,8 @@ Read just 1 line (new passphrase).
 This is needed to use
 .Nm
 as the passwordcheck program on OpenBSD - e.g., with
-":passwordcheck=/usr/bin/pwqcheck -1:\\"
+":passwordcheck=/usr/bin/pwqcheck \-1:\\"
+(without the quotes, but with the trailing backslash)
 in the "default" section in
 .Cm /etc/login.conf .
 .It Cm -2
@@ -205,14 +206,17 @@ option,
 .Nm
 also exits with non-zero status when it detects a weak passphrase.
 .Sh FILES
-.Pa /etc/passwdqc.conf .
+.Pa /etc/passwdqc.conf
+(not read unless this suggested file location is specified with the
+.Cm config=/etc/passwdqc.conf
+option).
 .Sh SEE ALSO
 .Xr pwqgen 1 ,
 .Xr passwd 5 ,
 .Xr passwdqc.conf 5 ,
 .Xr pam_passwdqc 8 .
 .Pp
-http://www.openwall.com/passwdqc/
+https://www.openwall.com/passwdqc/
 .Sh AUTHORS
 The pam_passwdqc module was written for Openwall GNU/*/Linux by Solar Designer.
 The

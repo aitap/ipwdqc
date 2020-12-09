@@ -1,13 +1,13 @@
-# $Owl: Owl/packages/passwdqc/passwdqc/passwdqc.spec,v 1.64 2016/07/20 20:55:40 solar Exp $
+# $Owl: Owl/packages/passwdqc/passwdqc/passwdqc.spec,v 1.67 2019/12/25 11:42:06 ldv Exp $
 
 Summary: A password/passphrase strength checking and policy enforcement toolset.
 Name: passwdqc
-Version: 1.3.1
+Version: 1.4.0
 Release: owl1
 License: BSD-compatible
 Group: System Environment/Base
-URL: http://www.openwall.com/passwdqc/
-Source: http://www.openwall.com/passwdqc/%name-%version.tar.gz
+URL: https://www.openwall.com/passwdqc/
+Source: https://www.openwall.com/passwdqc/%name-%version.tar.gz
 Provides: pam_passwdqc = %version-%release
 Obsoletes: pam_passwdqc < %version-%release
 BuildRequires: pam-devel
@@ -73,6 +73,24 @@ rm -rf %buildroot
 %_libdir/lib*.so
 
 %changelog
+* Wed Dec 25 2019 Dmitry V. Levin <ldv-at-owl.openwall.com> 1.4.0-owl1
+- Implemented i18n support in pam_passwdqc, contributed by Oleg Solovyov,
+Andrey Cherepanov, and me.  The i18n support is off by default, it can be
+enabled if Linux-PAM is built using --enable-nls configure option.
+- Implemented audit support in pam_passwdqc, contributed by Oleg Solovyov
+and me.  The audit support is off by default, it can be enabled if Linux-PAM
+is built using --enable-audit configure option.
+
+* Mon Dec 09 2019 Solar Designer <solar-at-owl.openwall.com> 1.3.2-owl1
+- Define _DEFAULT_SOURCE for our use of crypt(3) on newer glibc.
+The problem was identified and this change tested by Dmitry V. Levin.
+- Clarified in the man pages that /etc/passwdqc.conf is not read unless this
+suggested file location is specified with the config= option.
+- Clarified the OpenBSD configuration example.
+- Escape the minus sign in the OpenBSD configuration example to make the
+manpage linter happy, patch by Jackson Doak via Unit 193:
+https://www.openwall.com/lists/passwdqc-users/2019/04/16/1
+
 * Wed Jul 20 2016 Solar Designer <solar-at-owl.openwall.com> 1.3.1-owl1
 - With "non-unix", initialize the pw_dir field in fake_pw now that (since
 passwdqc 1.1.3 in 2009) passwdqc_check.c uses that field.
