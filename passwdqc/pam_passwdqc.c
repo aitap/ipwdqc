@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2000-2003,2005,2012,2016 by Solar Designer.  See LICENSE.
+ * Copyright (c) 2000-2003,2005,2012,2016,2019 by Solar Designer.
+ * Copyright (c) 2017,2018 by Dmitry V. Levin
+ * Copyright (c) 2017,2018 by Oleg Solovyov
+ * See LICENSE.
  */
 
 #ifdef __FreeBSD__
@@ -9,6 +12,7 @@
 #define _XOPEN_SOURCE 500
 #define _XOPEN_SOURCE_EXTENDED
 #define _XOPEN_VERSION 500
+#define _DEFAULT_SOURCE
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +23,10 @@
 #include <pwd.h>
 #ifdef HAVE_SHADOW
 #include <shadow.h>
+#endif
+#ifdef HAVE_LIBAUDIT
+#include <security/pam_modutil.h>
+#include <libaudit.h>
 #endif
 
 #define PAM_SM_PASSWORD
@@ -54,73 +62,107 @@ typedef lo_const void *pam_item_t;
 
 #include "passwdqc.h"
 
+#include "passwdqc_i18n.h"
+
 #define PROMPT_OLDPASS \
-	"Enter current password: "
+	_("Enter current password: ")
 #define PROMPT_NEWPASS1 \
-	"Enter new password: "
+	_("Enter new password: ")
 #define PROMPT_NEWPASS2 \
-	"Re-type new password: "
+	_("Re-type new password: ")
 
 #define MESSAGE_MISCONFIGURED \
-	"System configuration error.  Please contact your administrator."
+	_("System configuration error.  Please contact your administrator.")
 #define MESSAGE_INVALID_OPTION \
 	"pam_passwdqc: %s."
 #define MESSAGE_INTRO_PASSWORD \
-	"\nYou can now choose the new password.\n"
+	_("\nYou can now choose the new password.\n")
 #define MESSAGE_INTRO_BOTH \
-	"\nYou can now choose the new password or passphrase.\n"
+	_("\nYou can now choose the new password or passphrase.\n")
+
 #define MESSAGE_EXPLAIN_PASSWORD_1CLASS \
-	"A good password should be a mix of upper and lower case letters,\n" \
-	"digits, and other characters.  You can use a%s %d character long\n" \
-	"password.\n"
-#define MESSAGE_EXPLAIN_PASSWORD_CLASSES \
-	"A valid password should be a mix of upper and lower case letters,\n" \
-	"digits, and other characters.  You can use a%s %d character long\n" \
-	"password with characters from at least %d of these 4 classes.\n" \
+	_("A good password should be a mix of upper and lower case letters,\n" \
+	"digits, and other characters.  You can use a password\n" \
+	"that consists of %d characters.\n")
+
+#define MESSAGE_EXPLAIN_PASSWORD_CLASSES(count) \
+	P2_("A valid password should be a mix of upper and lower case letters,\n" \
+	"digits, and other characters.  You can use a password\n" \
+	"that consists of %d characters from at least %d of these 4 classes.\n" \
 	"An upper case letter that begins the password and a digit that\n" \
-	"ends it do not count towards the number of character classes used.\n"
-#define MESSAGE_EXPLAIN_PASSWORD_ALL_CLASSES \
-	"A valid password should be a mix of upper and lower case letters,\n" \
-	"digits, and other characters.  You can use a%s %d character long\n" \
-	"password with characters from all of these classes.  An upper\n" \
+	"ends it do not count towards the number of character classes used.\n", \
+	count), (count)
+#define MESSAGE_EXPLAIN_PASSWORD_ALL_CLASSES(count) \
+	P2_("A valid password should be a mix of upper and lower case letters,\n" \
+	"digits, and other characters.  You can use a password\n" \
+	"that consists of %d characters from all of these classes.  An upper\n" \
 	"case letter that begins the password and a digit that ends it do\n" \
-	"not count towards the number of character classes used.\n"
-#define MESSAGE_EXPLAIN_PASSWORD_ALT \
-	"A valid password should be a mix of upper and lower case letters,\n" \
-	"digits, and other characters.  You can use a%s %d character long\n" \
-	"password with characters from at least 3 of these 4 classes, or\n" \
-	"a%s %d character long password containing characters from all the\n" \
-	"classes.  An upper case letter that begins the password and a\n" \
+	"not count towards the number of character classes used.\n", \
+	count), (count)
+#define MESSAGE_EXPLAIN_PASSWORD_ALT_1(count) \
+	P2_("A valid password should be a mix of upper and lower case letters,\n" \
+	"digits, and other characters.  You can use a password\n" \
+	"that consists of %d characters from at least 3 of these 4 classes, or\n", \
+	count), (count)
+#define MESSAGE_EXPLAIN_PASSWORD_ALT_2(count) \
+	P2_("a password containing %d characters from all the classes.\n" \
+	"An upper case letter that begins the password and a\n" \
 	"digit that ends it do not count towards the number of character\n" \
-	"classes used.\n"
-#define MESSAGE_EXPLAIN_PASSPHRASE \
+	"classes used.\n", \
+	count), (count)
+#define MESSAGE_EXPLAIN_PASSPHRASE(count) \
+	P3_("A passphrase should be of at least %d word, %d to %d characters\n" \
+	"long, and contain enough different characters.\n", \
 	"A passphrase should be of at least %d words, %d to %d characters\n" \
-	"long, and contain enough different characters.\n"
+	"long, and contain enough different characters.\n", \
+	count), (count)
+
 #define MESSAGE_RANDOM \
-	"Alternatively, if no one else can see your terminal now, you can\n" \
-	"pick this as your password: \"%s\".\n"
+	_("Alternatively, if no one else can see your terminal now, you can\n" \
+	"pick this as your password: \"%s\".\n")
 #define MESSAGE_RANDOMONLY \
-	"This system is configured to permit randomly generated passwords\n" \
+	_("This system is configured to permit randomly generated passwords\n" \
 	"only.  If no one else can see your terminal now, you can pick this\n" \
-	"as your password: \"%s\".  Otherwise come back later.\n"
+	"as your password: \"%s\".  Otherwise come back later.\n")
 #define MESSAGE_RANDOMFAILED \
-	"This system is configured to use randomly generated passwords\n" \
+	_("This system is configured to use randomly generated passwords\n" \
 	"only, but the attempt to generate a password has failed.  This\n" \
 	"could happen for a number of reasons: you could have requested\n" \
 	"an impossible password length, or the access to kernel random\n" \
-	"number pool could have failed."
+	"number pool could have failed.")
 #define MESSAGE_TOOLONG \
-	"This password may be too long for some services.  Choose another."
+	_("This password may be too long for some services.  Choose another.")
 #define MESSAGE_TRUNCATED \
-	"Warning: your longer password will be truncated to 8 characters."
+	_("Warning: your longer password will be truncated to 8 characters.")
 #define MESSAGE_WEAKPASS \
-	"Weak password: %s."
+	_("Weak password: %s.")
 #define MESSAGE_NOTRANDOM \
-	"Sorry, you've mistyped the password that was generated for you."
+	_("Sorry, you've mistyped the password that was generated for you.")
 #define MESSAGE_MISTYPED \
-	"Sorry, passwords do not match."
+	_("Sorry, passwords do not match.")
 #define MESSAGE_RETRY \
-	"Try again."
+	_("Try again.")
+
+static int logaudit(pam_handle_t *pamh, int status, int flags)
+{
+#ifdef HAVE_LIBAUDIT
+	if (!(flags & F_NO_AUDIT)) {
+		int rc;
+
+		rc = pam_modutil_audit_write(pamh, AUDIT_USER_CHAUTHTOK,
+			"pam_passwdqc", status);
+
+		return status != PAM_SUCCESS ? status : rc;
+	} else {
+		/* audit is disabled */
+		return status;
+	}
+#else /* !HAVE_LIBAUDIT */
+	(void) pamh;
+	(void) flags;
+	return status;
+#endif
+}
 
 static int converse(pam_handle_t *pamh, int style, l_const char *text,
     struct pam_response **resp)
@@ -285,7 +327,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 		}
 
 		if (status != PAM_SUCCESS)
-			return status;
+			return logaudit(pamh, status, params.pam.flags);
 	}
 
 	if (flags & PAM_PRELIM_CHECK)
@@ -293,12 +335,12 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 
 	status = pam_get_item(pamh, PAM_USER, &item);
 	if (status != PAM_SUCCESS)
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 	user = item;
 
 	status = pam_get_item(pamh, PAM_OLDAUTHTOK, &item);
 	if (status != PAM_SUCCESS)
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 	oldpass = item;
 
 	if (params.pam.flags & F_NON_UNIX) {
@@ -315,13 +357,13 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 		pw = getpwnam(user);
 		endpwent();
 		if (!pw)
-			return PAM_USER_UNKNOWN;
+			return logaudit(pamh, PAM_USER_UNKNOWN, params.pam.flags);
 		if ((params.pam.flags & F_CHECK_OLDAUTHTOK) && !am_root(pamh)
 		    && (!oldpass || check_pass(pw, oldpass)))
 			status = PAM_AUTH_ERR;
 		_passwdqc_memzero(pw->pw_passwd, strlen(pw->pw_passwd));
 		if (status != PAM_SUCCESS)
-			return status;
+			return logaudit(pamh, status, params.pam.flags);
 	}
 
 	randomonly = params.qc.min[4] > params.qc.max;
@@ -334,11 +376,11 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 	if (params.pam.flags & F_USE_AUTHTOK) {
 		status = pam_get_item(pamh, PAM_AUTHTOK, &item);
 		if (status != PAM_SUCCESS)
-			return status;
+			return logaudit(pamh, status, params.pam.flags);
 		newpass = item;
 		if (!newpass ||
 		    (check_max(&params.qc, pamh, newpass) && enforce))
-			return PAM_AUTHTOK_ERR;
+			return logaudit(pamh, PAM_AUTHTOK_ERR, params.pam.flags);
 		check_reason =
 		    passwdqc_check(&params.qc, newpass, oldpass, pw);
 		if (check_reason) {
@@ -347,7 +389,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t *pamh, int flags,
 			if (enforce)
 				status = PAM_AUTHTOK_ERR;
 		}
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 	}
 
 	retries_left = params.pam.retry;
@@ -361,41 +403,38 @@ retry:
 	else
 		status = say(pamh, PAM_TEXT_INFO, MESSAGE_INTRO_PASSWORD);
 	if (status != PAM_SUCCESS)
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 
 	if (!randomonly && params.qc.min[0] == params.qc.min[4])
 		status = say(pamh, PAM_TEXT_INFO,
 		    MESSAGE_EXPLAIN_PASSWORD_1CLASS,
-		    params.qc.min[4] == 8 || params.qc.min[4] == 11 ? "n" : "",
 		    params.qc.min[4]);
+
 	else if (!randomonly && params.qc.min[3] == params.qc.min[4])
 		status = say(pamh, PAM_TEXT_INFO,
-		    MESSAGE_EXPLAIN_PASSWORD_CLASSES,
-		    params.qc.min[4] == 8 || params.qc.min[4] == 11 ? "n" : "",
-		    params.qc.min[4],
+		    MESSAGE_EXPLAIN_PASSWORD_CLASSES(params.qc.min[4]),
 		    params.qc.min[1] != params.qc.min[3] ? 3 : 2);
 	else if (!randomonly && params.qc.min[3] == INT_MAX)
 		status = say(pamh, PAM_TEXT_INFO,
-		    MESSAGE_EXPLAIN_PASSWORD_ALL_CLASSES,
-		    params.qc.min[4] == 8 || params.qc.min[4] == 11 ? "n" : "",
-		    params.qc.min[4]);
-	else if (!randomonly)
+		    MESSAGE_EXPLAIN_PASSWORD_ALL_CLASSES(params.qc.min[4]));
+	else if (!randomonly) {
 		status = say(pamh, PAM_TEXT_INFO,
-		    MESSAGE_EXPLAIN_PASSWORD_ALT,
-		    params.qc.min[3] == 8 || params.qc.min[3] == 11 ? "n" : "",
-		    params.qc.min[3],
-		    params.qc.min[4] == 8 || params.qc.min[4] == 11 ? "n" : "",
-		    params.qc.min[4]);
+		    MESSAGE_EXPLAIN_PASSWORD_ALT_1(params.qc.min[3]));
+		if (status == PAM_SUCCESS) {
+			status = say(pamh, PAM_TEXT_INFO,
+			    MESSAGE_EXPLAIN_PASSWORD_ALT_2(params.qc.min[4]));
+		}
+	}
 	if (status != PAM_SUCCESS)
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 
 	if (!randomonly &&
 	    params.qc.passphrase_words && params.qc.min[2] <= params.qc.max) {
-		status = say(pamh, PAM_TEXT_INFO, MESSAGE_EXPLAIN_PASSPHRASE,
-		    params.qc.passphrase_words,
+		status = say(pamh, PAM_TEXT_INFO,
+		    MESSAGE_EXPLAIN_PASSPHRASE(params.qc.passphrase_words),
 		    params.qc.min[2], params.qc.max);
 		if (status != PAM_SUCCESS)
-			return status;
+			return logaudit(pamh, status, params.pam.flags);
 	}
 
 	randompass = passwdqc_random(&params.qc);
@@ -409,7 +448,7 @@ retry:
 	} else if (randomonly) {
 		say(pamh, PAM_ERROR_MSG, am_root(pamh) ?
 		    MESSAGE_RANDOMFAILED : MESSAGE_MISCONFIGURED);
-		return PAM_AUTHTOK_ERR;
+		return logaudit(pamh, PAM_AUTHTOK_ERR, params.pam.flags);
 	}
 
 	status = converse(pamh, PAM_PROMPT_ECHO_OFF, PROMPT_NEWPASS1, &resp);
@@ -419,7 +458,7 @@ retry:
 	if (status != PAM_SUCCESS) {
 		pwqc_overwrite_string(randompass);
 		pwqc_drop_mem(randompass);
-		return status;
+		return logaudit(pamh, status, params.pam.flags);
 	}
 
 	trypass = strdup(resp->resp);
@@ -429,7 +468,7 @@ retry:
 	if (!trypass) {
 		pwqc_overwrite_string(randompass);
 		pwqc_drop_mem(randompass);
-		return PAM_AUTHTOK_ERR;
+		return logaudit(pamh, PAM_AUTHTOK_ERR, params.pam.flags);
 	}
 
 	if (check_max(&params.qc, pamh, trypass) && enforce) {
@@ -486,7 +525,7 @@ retry:
 			goto retry;
 	}
 
-	return status;
+	return logaudit(pamh, status, params.pam.flags);
 }
 
 #ifdef PAM_MODULE_ENTRY
