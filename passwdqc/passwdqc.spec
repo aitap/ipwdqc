@@ -1,8 +1,6 @@
-# $Owl: Owl/packages/passwdqc/passwdqc/passwdqc.spec,v 1.67 2019/12/25 11:42:06 ldv Exp $
-
 Summary: A password/passphrase strength checking and policy enforcement toolset.
 Name: passwdqc
-Version: 1.4.0
+Version: 2.0.0
 Release: owl1
 License: BSD-compatible
 Group: System Environment/Base
@@ -73,6 +71,26 @@ rm -rf %buildroot
 %_libdir/lib*.so
 
 %changelog
+* Tue Feb 16 2021 Solar Designer <solar-at-owl.openwall.com> 2.0.0-owl1
+- Introduce and use passwdqc_params_free().
+
+* Fri Jan 29 2021 Solar Designer <solar-at-owl.openwall.com> 1.9.0-owl1
+- Add support for external wordlist, denylist, and binary filter.
+- passwdqc_random(): Obtain all of the random bytes before the loop.
+- Merge changes needed for building with Visual Studio on Windows.
+
+* Mon Jan 25 2021 Solar Designer <solar-at-owl.openwall.com> 1.5.0-owl1
+- Updated the included wordlist to avoid some inappropriate words in randomly
+generated passphrases while not removing any words from the "word-based" check,
+and also to have plenty of extra words for subsequent removal of more words
+that might be considered inappropriate from the initial 4096 that are used for
+randomly generated passphrases.
+
+* Mon Jan 25 2021 Solar Designer <solar-at-owl.openwall.com> 1.4.1-owl1
+- Set default for "max" to 72 (was 40).
+- Document "similar" in pwqcheck print_help() and man page.
+- Drop the CVS Id tags (stale ones would be confusing with our move to git).
+
 * Wed Dec 25 2019 Dmitry V. Levin <ldv-at-owl.openwall.com> 1.4.0-owl1
 - Implemented i18n support in pam_passwdqc, contributed by Oleg Solovyov,
 Andrey Cherepanov, and me.  The i18n support is off by default, it can be

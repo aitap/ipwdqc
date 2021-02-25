@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008,2009 by Dmitry V. Levin
- * Copyright (c) 2010,2016 by Solar Designer
+ * Copyright (c) 2010,2016,2021 by Solar Designer
  * See LICENSE
  */
 
@@ -67,6 +67,10 @@ static char *extract_string(char **stringp)
 static struct passwd *parse_pwline(char *line, struct passwd *pw)
 {
 	if (!strchr(line, ':')) {
+#ifdef _MSC_VER
+		memset(pw, 0, sizeof(*pw));
+		pw->pw_name = line;
+#else
 		struct passwd *p = getpwnam(line);
 		endpwent();
 		if (!p) {
@@ -76,6 +80,7 @@ static struct passwd *parse_pwline(char *line, struct passwd *pw)
 		if (p->pw_passwd)
 			_passwdqc_memzero(p->pw_passwd, strlen(p->pw_passwd));
 		memcpy(pw, p, sizeof(*pw));
+#endif
 	} else {
 		memset(pw, 0, sizeof(*pw));
 		pw->pw_name = extract_string(&line);
@@ -111,6 +116,14 @@ print_help(void)
 	    "       set number of words required for a passphrase;\n"
 	    "  match=N\n"
 	    "       set length of common substring in substring check;\n"
+	    "  similar=permit|deny\n"
+	    "       whether a new passphrase is allowed to be similar to the old one;\n"
+	    "  wordlist=FILE\n"
+	    "       deny passwords that are based on lines of a tiny external text file;\n"
+	    "  denylist=FILE\n"
+	    "       deny passphrases directly appearing in a tiny external text file;\n"
+	    "  filter=FILE\n"
+	    "       deny passphrases directly appearing in a maybe huge binary filter file;\n"
 	    "  config=FILE\n"
 	    "       load config FILE in passwdqc.conf format;\n"
 	    "  -1\n"
@@ -212,6 +225,8 @@ cleanup:
 
 	if (multi)
 		goto next_pass;
+
+	passwdqc_params_free(&params);
 
 	return rc;
 

@@ -1,6 +1,6 @@
 .\" Copyright (c) 2009 Dmitry V. Levin
 .\" All rights reserved.
-.\" Copyright (c) 2000-2003,2005,2008,2010,2019 Solar Designer
+.\" Copyright (c) 2000-2003,2005,2008,2010,2019,2020 Solar Designer
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -18,9 +18,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $Owl: Owl/packages/passwdqc/passwdqc/pwqcheck.1,v 1.19 2019/12/09 23:29:53 solar Exp $
-.\"
-.Dd December 9, 2019
+.Dd December 30, 2020
 .Dt PWQCHECK 1
 .Os "Openwall Project"
 .Sh NAME
@@ -110,7 +108,7 @@ contain enough different characters for the character classes and
 the minimum length they have been checked against.
 .Pp
 .It Cm max Ns = Ns Ar N
-.Pq default: Cm max Ns = Ns 40
+.Pq default: Cm max Ns = Ns 72
 The maximum allowed password length.
 This can be used to prevent users from setting passwords that may be
 too long for some system services.
@@ -140,6 +138,49 @@ with the weak substring partially discounted.
 .Pp
 The substring search is case-insensitive and is able to detect and
 remove a common substring spelled backwards.
+.It Xo
+.Sm off
+.Cm similar No = Cm permit | deny
+.Sm on
+.Xc
+.Pq default: Cm similar Ns = Ns Cm deny
+Whether a new password is allowed to be similar to the old one.
+The passwords are considered to be similar when there is a sufficiently
+long common substring and the new password with the substring partially
+discounted would be weak.
+.It Cm wordlist Ns = Ns Ar FILE
+Deny passwords that are based on lines of the tiny external text
+.Ar FILE ,
+which can reasonably be e.g. a list of a few thousand common passwords.
+Common dictionary words may also reasonably be included, especially in a
+local language other than English, or longer yet common English words.
+(passwdqc includes a list of a few thousand common English words of
+lengths from 3 to 6 built in.  Any word list possibly specified with
+this option is used in addition to the built-in word list.)
+.Pp
+Substring matching and discounting will be used if the
+.Cm match
+setting
+above is non-zero.  Please note that this is very inefficient, and isn't
+to be used with large wordlists.
+.It Cm denylist Ns = Ns Ar FILE
+Deny passwords or passphrases directly appearing in the tiny external text
+.Ar FILE .
+That file can reasonably be e.g. a list of common passwords if
+only a relaxed policy is desired and stricter checks are thus disabled
+(using their separate options).  Such policy would only be somewhat
+effective against online/remote attacks, but not against offline attacks
+on hashed passwords.
+.It Cm filter Ns = Ns Ar FILE
+Deny passwords or passphrases directly appearing in a maybe huge binary
+filter
+.Ar FILE
+created with pwqfilter.  This is very efficient, needing at
+most two random disk reads per query.  A filter created from millions of
+leaked passwords can reasonably be used on top of passwdqc's other
+checks to further reduce the number of passing yet weak passwords
+without causing unreasonable inconvenience (as e.g. higher minimum
+lengths and character set requirements could).
 .It Cm config Ns = Ns Ar FILE
 Load config
 .Ar FILE

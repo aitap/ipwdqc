@@ -1,8 +1,12 @@
 /*
- * Copyright (c) 2000-2003,2005,2016 by Solar Designer
+ * Copyright (c) 2000-2003,2005,2016,2020,2021 by Solar Designer
  * Copyright (c) 2008,2009 by Dmitry V. Levin
  * See LICENSE
  */
+
+#ifdef _MSC_VER
+#define _CRT_NONSTDC_NO_WARNINGS /* we use POSIX function names */
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +29,7 @@ static int
 parse_option(passwdqc_params_t *params, char **reason, const char *option)
 {
 	const char *err = "Invalid parameter value";
+	const char * const err_oom = "Out of memory";
 	const char *p;
 	char *e;
 	int i, rc = 0;
@@ -83,6 +88,27 @@ parse_option(passwdqc_params_t *params, char **reason, const char *option)
 		if (*e || (v && v < 24) || v > 85)
 			goto parse_error;
 		params->qc.random_bits = v;
+	} else if ((p = skip_prefix(option, "wordlist="))) {
+		free(params->qc.wordlist);
+		params->qc.wordlist = NULL;
+		if (*p && !(params->qc.wordlist = strdup(p))) {
+			err = err_oom;
+			goto parse_error;
+		}
+	} else if ((p = skip_prefix(option, "denylist="))) {
+		free(params->qc.denylist);
+		params->qc.denylist = NULL;
+		if (*p && !(params->qc.denylist = strdup(p))) {
+			err = err_oom;
+			goto parse_error;
+		}
+	} else if ((p = skip_prefix(option, "filter="))) {
+		free(params->qc.filter);
+		params->qc.filter = NULL;
+		if (*p && !(params->qc.filter = strdup(p))) {
+			err = err_oom;
+			goto parse_error;
+		}
 	} else if ((p = skip_prefix(option, "enforce="))) {
 		params->pam.flags &= ~F_ENFORCE_MASK;
 		if (!strcmp(p, "users"))
@@ -133,8 +159,9 @@ parse_option(passwdqc_params_t *params, char **reason, const char *option)
 	return 0;
 
 parse_error:
+	passwdqc_params_free(params);
 	e = concat("Error parsing parameter \"", option, "\": ",
-	    (rc ? (*reason ? *reason : "Out of memory") : err), NULL);
+	    (rc ? (*reason ? *reason : err_oom) : err), NULL);
 	free(*reason);
 	*reason = e;
 	return rc ? rc : -1;
@@ -159,11 +186,14 @@ passwdqc_params_parse(passwdqc_params_t *params, char **reason,
 static const passwdqc_params_t defaults = {
 	{
 		{INT_MAX, 24, 11, 8, 7},	/* min */
-		40,				/* max */
+		72,				/* max */
 		3,				/* passphrase_words */
 		4,				/* match_length */
 		1,				/* similar_deny */
-		47				/* random_bits */
+		47,				/* random_bits */
+		NULL,				/* wordlist */
+		NULL,				/* denylist */
+		NULL				/* filter */
 	},
 	{
 		F_ENFORCE_EVERYONE,		/* flags */
@@ -174,4 +204,12 @@ static const passwdqc_params_t defaults = {
 void passwdqc_params_reset(passwdqc_params_t *params)
 {
 	*params = defaults;
+}
+
+void passwdqc_params_free(passwdqc_params_t *params)
+{
+	free(params->qc.wordlist);
+	free(params->qc.denylist);
+	free(params->qc.filter);
+	passwdqc_params_reset(params);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2002,2016,2019 by Solar Designer
+ * Copyright (c) 2000-2002,2016,2019,2020,2021 by Solar Designer
  * Copyright (c) 2008,2009 by Dmitry V. Levin
  * See LICENSE
  */
@@ -7,7 +7,24 @@
 #ifndef PASSWDQC_H__
 #define PASSWDQC_H__
 
+#ifndef _MSC_VER
 #include <pwd.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef _MSC_VER
+/* Partial struct passwd just to accommodate passwdqc code's expectations */
+struct passwd {
+	char *pw_name;
+	char *pw_passwd;
+	char *pw_gecos;
+	char *pw_dir;
+	char *pw_shell;
+};
+#endif
 
 typedef struct {
 	int min[5], max;
@@ -15,6 +32,9 @@ typedef struct {
 	int match_length;
 	int similar_deny;
 	int random_bits;
+	char *wordlist;
+	char *denylist;
+	char *filter;
 } passwdqc_params_qc_t;
 
 typedef struct {
@@ -36,6 +56,7 @@ extern int passwdqc_params_parse(passwdqc_params_t *params,
 extern int passwdqc_params_load(passwdqc_params_t *params,
     char **reason, const char *pathname);
 extern void passwdqc_params_reset(passwdqc_params_t *params);
+extern void passwdqc_params_free(passwdqc_params_t *params);
 
 #define F_ENFORCE_MASK			0x00000003
 #define F_ENFORCE_USERS			0x00000001
@@ -50,8 +71,12 @@ extern void passwdqc_params_reset(passwdqc_params_t *params);
 #define F_USE_AUTHTOK			0x00000200
 #define F_NO_AUDIT			0x00000400
 
-#define PASSWDQC_VERSION		"1.4.0"
+#define PASSWDQC_VERSION		"2.0.0"
 
 extern void (*_passwdqc_memzero)(void *, size_t);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PASSWDQC_H__ */
